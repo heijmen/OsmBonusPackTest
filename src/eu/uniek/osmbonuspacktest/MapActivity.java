@@ -1,105 +1,117 @@
 package eu.uniek.osmbonuspacktest;
 
-import java.util.ArrayList;
-
-import org.osmdroid.bonuspack.routing.GoogleRoadManager;
-import org.osmdroid.bonuspack.routing.Road;
-import org.osmdroid.bonuspack.routing.RoadManager;
-import org.osmdroid.bonuspack.routing.RoadNode;
 import org.osmdroid.util.GeoPoint;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Color;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.location.Criteria;
-import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Handler;
+import android.os.Vibrator;
 import android.view.Menu;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import eu.uniek.compas.Kompas;
+import eu.uniek.compas.KompasListener;
+import eu.uniek.gps.GPSLocationListener;
+import eu.uniek.route.RouteHandler;
+import eu.uniek.route.RouteListener;
 
-import com.wwy.gps.GPSLocationListener;
+public class MapActivity extends Activity  {
 
-public class MapActivity extends Activity implements SensorEventListener  {
-
-    private TextView tv;
-	private SensorManager mSensorManager;
-	private Sensor mCompass;
-	private LocationListener mLocationListener = new GPSLocationListener();
-	private Handler handler = new Handler();
+	private TextView textView;
+	private TextView textView1;
+	
+	private Context context = this;
+	private Kompas kompas;
+	
+	private GPSLocationListener mLocationListener = new GPSLocationListener(this);
+	private RouteHandler mRouteHandler;
 	private LocationManager mLocationManager;
-	private float mAngleFromNorth;
+	
+	private Vibrator mVibratorService;
 	
 
+	
 	@Override
 	protected void onResume() {
-		 super.onResume();
-		    mSensorManager.registerListener(this, mCompass, SensorManager.SENSOR_DELAY_NORMAL);
-		    Criteria c = new Criteria();
-			c.setAccuracy(Criteria.ACCURACY_FINE);
-			String provider = mLocationManager.getBestProvider(c, true);
-		//	mLocationManager.requestLocationUpdates(provider, 500, 1, mLocationListener);
+		super.onResume();
+		kompas.startListening();
+		Criteria c = new Criteria();
+		c.setAccuracy(Criteria.ACCURACY_FINE);
+		String provider = mLocationManager.getBestProvider(c, true);
+		mLocationManager.requestLocationUpdates(provider, 500, 1, mLocationListener);
 	}
-	
+
 	@Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_map); 
-        mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
-        mLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        mCompass = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
-        RoadManager roadManager = new GoogleRoadManager();
-        roadManager.addRequestOption("mode=walking");
-        ArrayList<GeoPoint> waypoints = new ArrayList<GeoPoint>();
-        GeoPoint startPoint = new GeoPoint(52.068533, 5.089045);
-        GeoPoint endPoint = new GeoPoint(52.210897,5.193325);
-        waypoints.add(startPoint); 
-        waypoints.add(endPoint);
-        Road road = roadManager.getRoad(waypoints);
-         tv = (TextView) findViewById(R.id.LOL); 
-        tv.setText("");
-        for(RoadNode s : road.mNodes) {
-        	
-        	tv.setText(tv.getText().toString() + s.mLocation.getLatitudeE6() + " | " + s.mLocation.getLongitudeE6() + " mtype" + s.mManeuverType + "\n\r");
-        }
-        
-        
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.activity_map, menu);
-        return true;
-    }
-
-	public void onAccuracyChanged(Sensor arg0, int arg1) {
-		// TODO Auto-generated method stub
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_map);
 		
+		kompas = new Kompas(this, new KompasListener() {
+			public void onSensorChanged(float azimuth) {
+				if(mRouteHandler != null && mRouteHandler.getCurrentDestination() != null) {
+					drawImage(new GeoPoint(mLocationListener.getCurrentLocation().getLatitude(), mLocationListener.getCurrentLocation().getLongitude()), mRouteHandler.getCurrentDestination(), azimuth);
+				}
+			}
+		});
+		mLocationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+		textView = (TextView) findViewById(R.id.LOL); 
+		textView1 = (TextView) findViewById(R.id.textView1);
+		
+		mVibratorService = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+		
+		
+		Button button = (Button) findViewById(R.id.startRouteButton);
+		button.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				if(mLocationListener.getCurrentLocation() != null) {
+					mRouteHandler = new RouteHandler(mLocationListener, context, new RouteListener() {
+						public void onRouteStart() {
+							mVibratorService.vibrate(1000);
+						}
+						public void onDestinationArrived() {
+							mVibratorService.vibrate(10000);
+						}
+					});
+				} else {
+					Toast.makeText(context, "No currentLocation", Toast.LENGTH_SHORT).show();
+				}
+			}
+		});
 	}
 
-	public void onSensorChanged(SensorEvent arg0) {
-		mAngleFromNorth = arg0.values[0];
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.activity_map, menu);
+		return true;
+	}
+	public void drawImage(GeoPoint startPoint, GeoPoint endPoint, float azimuth) {
 		DrawView drawView = (DrawView) findViewById(R.id.drawView1);
-		GeoPoint startPoint = new GeoPoint(52.068533, 5.089045);
-        GeoPoint endPoint = new GeoPoint(52.207607,4.847488);
-        int heijmething = (int) getAngleBetweenGeoPoints(startPoint, endPoint);
+		drawView.setBackgroundColor(Color.WHITE);
+		int heijmething = (int) getAngleBetweenGeoPoints(startPoint, endPoint, azimuth);
 		drawView.drawTheThing(heijmething);
-		tv.setText(mAngleFromNorth +" Heijmenthing "+heijmething);
-		drawView.setBackgroundColor(Color.WHITE); 
-		
+		textView.setText(kompas.getAzimuth() +" Heijmenthing " + heijmething + " " + mLocationListener.getCurrentLocation());
 	}
-	
-	public double getAngleBetweenGeoPoints(GeoPoint currentLocation, GeoPoint destination) {
-		double angle = currentLocation.bearingTo(destination) - mAngleFromNorth;
+
+	public double getAngleBetweenGeoPoints(GeoPoint currentLocation, GeoPoint destination, float azimuth) {
+		double angle = currentLocation.bearingTo(destination) - azimuth;
 		if (angle < 0) {
-			angle += 360;
+			angle += 360; 
 		}
 		return angle;
 	}
+
+	public void updatedLocation(GeoPoint currentLocation) {
+		textView.setText("CurrentLocation lat/long" + currentLocation.getLatitudeE6() + " " + currentLocation.getLongitudeE6());
+	}
+	public TextView getTextView() {
+		return textView;
+	}
+
+
 }
