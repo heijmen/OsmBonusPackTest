@@ -24,7 +24,7 @@ public class RouteHandler {
 	private RouteListener mRouteListener;
 	
 	public GeoPoint getCurrentDestination() {
-		if(!(mCurrentDestinationIndex < mRoad.mNodes.size())) {
+		if(mCurrentDestinationIndex < mRoad.mNodes.size()) {
 			return mRoad.mNodes.get(mCurrentDestinationIndex).mLocation;
 		}
 		return null;
