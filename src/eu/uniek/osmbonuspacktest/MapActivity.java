@@ -2,8 +2,11 @@ package eu.uniek.osmbonuspacktest;
 
 import org.osmdroid.util.GeoPoint;
 
+import com.wwy.gyroguide.database.DatabaseHandler;
+
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.location.Criteria;
 import android.location.LocationManager;
@@ -25,16 +28,18 @@ public class MapActivity extends Activity  {
 
 	private TextView textView;
 	private TextView textView1;
-	
+	private GeoPoint destination = new GeoPoint(52.093367,5.116061);
 	private Context context = this;
 	private Kompas kompas;
 	
 	private GPSLocationListener mLocationListener = new GPSLocationListener(this);
-	private RouteHandler mRouteHandler;
+	//private RouteHandler mRouteHandler;
+	private RoadMaker mRoadMaker;
+	
 	private LocationManager mLocationManager;
 	
 	private Vibrator mVibratorService;
-	
+	private DatabaseHandler mDatabaseHandler = new DatabaseHandler(this, "osmbonuspackdatabase", 1);
 
 	
 	@Override
@@ -52,10 +57,13 @@ public class MapActivity extends Activity  {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_map);
 		
+//		Intent i = new Intent(this, MapTestActivity.class);
+//		startActivity(i);
+		
 		kompas = new Kompas(this, new KompasListener() {
 			public void onSensorChanged(float azimuth) {
-				if(mRouteHandler != null && mRouteHandler.getCurrentDestination() != null) {
-					drawImage(new GeoPoint(mLocationListener.getCurrentLocation().getLatitude(), mLocationListener.getCurrentLocation().getLongitude()), mRouteHandler.getCurrentDestination(), azimuth);
+				if(mRoadMaker != null && mRoadMaker.getCurrentDestination() != null) {
+					drawImage(new GeoPoint(mLocationListener.getCurrentLocation().getLatitude(), mLocationListener.getCurrentLocation().getLongitude()), mRoadMaker.getCurrentDestination(), azimuth);
 				}
 			}
 		});
@@ -70,14 +78,18 @@ public class MapActivity extends Activity  {
 		button.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				if(mLocationListener.getCurrentLocation() != null) {
-					mRouteHandler = new RouteHandler(mLocationListener, context, new RouteListener() {
-						public void onRouteStart() {
-							mVibratorService.vibrate(1000);
-						}
-						public void onDestinationArrived() {
+					mRoadMaker = new RoadMaker(mLocationListener, destination, new RoadMakerListener() {
+						
+						public void onDestinationReached() {
 							mVibratorService.vibrate(10000);
 						}
-					});
+						
+						public void onDestinationChanged() {
+							mVibratorService.vibrate(1000);
+						}
+						
+					}, mDatabaseHandler); 
+					mRoadMaker.startRoute();
 				} else {
 					Toast.makeText(context, "No currentLocation", Toast.LENGTH_SHORT).show();
 				}

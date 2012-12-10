@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.osmdroid.util.GeoPoint;
 
+
 import android.location.Location;
 
 public class GPSHandler {
@@ -28,5 +29,6 @@ public class GPSHandler {
 		}
 		return false;
 	}
+
 
 }

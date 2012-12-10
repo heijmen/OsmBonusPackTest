@@ -36,16 +36,20 @@ public class RouteHandler {
 			mUpdateRoadHandler.postDelayed(mUpdateRunnable, 1000);
 		}
 	};
+	private GeoPoint destination;
 	
-	public RouteHandler(GPSLocationListener locationListener, Context context, RouteListener routeListener) {
+	public RouteHandler(GPSLocationListener locationListener, Context context, RouteListener routeListener, GeoPoint destination) {
 		this.mLocationListener = locationListener;
 		this.mContext = context;
+		this.destination = destination;
 		this.mUpdateRoadHandler = new Handler();
 		this.mRouteListener = routeListener;
 		
 		mRoad = getRoute();
 		mUpdateRunnable.run();
 	}
+	
+	
 	
 	public Road getRoute() {
 		RoadManager roadManager = new GoogleRoadManager();
