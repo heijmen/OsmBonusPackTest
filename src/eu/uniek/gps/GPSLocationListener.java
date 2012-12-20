@@ -14,7 +14,6 @@ public class GPSLocationListener implements LocationListener {
 
 	public GPSLocationListener(MapActivity mapActivity) {
 		this.mapActivity = mapActivity;
-		// TODO Auto-generated constructor stub
 	}
 	public void onLocationChanged(Location location) {  
 		this.currentLocation = location;

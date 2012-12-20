@@ -2,8 +2,6 @@ package eu.uniek.osmbonuspacktest;
 
 import org.osmdroid.util.GeoPoint;
 
-import com.wwy.gyroguide.database.DatabaseHandler;
-
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -11,6 +9,7 @@ import android.graphics.Color;
 import android.location.Criteria;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.os.Vibrator;
 import android.view.Menu;
 import android.view.View;
@@ -18,23 +17,27 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.wwy.gyroguide.database.DatabaseHandler;
+
 import eu.uniek.compas.Kompas;
 import eu.uniek.compas.KompasListener;
+import eu.uniek.gps.GPSHandler;
 import eu.uniek.gps.GPSLocationListener;
-import eu.uniek.route.RouteHandler;
-import eu.uniek.route.RouteListener;
+import eu.uniek.osmbonuspacktest.AnotherRoadHandler.AnotherRoadHanderListener;
 
 public class MapActivity extends Activity  {
 
 	private TextView textView;
 	private TextView textView1;
-	private GeoPoint destination = new GeoPoint(52.093367,5.116061);
+	private GeoPoint destination = new GeoPoint(52.09517,5.119622);
 	private Context context = this;
 	private Kompas kompas;
 	
 	private GPSLocationListener mLocationListener = new GPSLocationListener(this);
 	//private RouteHandler mRouteHandler;
-	private RoadMaker mRoadMaker;
+	private AnotherRoadHandler mRoadMaker;
+	
 	
 	private LocationManager mLocationManager;
 	
@@ -56,9 +59,14 @@ public class MapActivity extends Activity  {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_map);
-		
-//		Intent i = new Intent(this, MapTestActivity.class);
-//		startActivity(i);
+		if (android.os.Build.VERSION.SDK_INT > 9) {
+			StrictMode.ThreadPolicy policy = 
+				new StrictMode.ThreadPolicy.Builder().permitAll().build();
+			StrictMode.setThreadPolicy(policy);
+		}
+//		mDatabaseHandler.addHerkenningPunt(new GeoPoint(52.097463,5.109365));
+		Intent i = new Intent(this, MapTestActivity.class);
+		startActivity(i);
 		
 		kompas = new Kompas(this, new KompasListener() {
 			public void onSensorChanged(float azimuth) {
@@ -78,17 +86,16 @@ public class MapActivity extends Activity  {
 		button.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
 				if(mLocationListener.getCurrentLocation() != null) {
-					mRoadMaker = new RoadMaker(mLocationListener, destination, new RoadMakerListener() {
-						
-						public void onDestinationReached() {
-							mVibratorService.vibrate(10000);
-						}
-						
-						public void onDestinationChanged() {
+					mRoadMaker = new AnotherRoadHandler(mLocationListener,destination,mDatabaseHandler,new AnotherRoadHanderListener() {
+						public void onWayPointReached(GeoPoint newWayPoint) {
+							textView1.setText("" + GPSHandler.distanceBetween(mLocationListener.getLocationInGeoPoint(), newWayPoint));
 							mVibratorService.vibrate(1000);
 						}
-						
-					}, mDatabaseHandler); 
+						public void onDestinationReached() {
+							mVibratorService.vibrate(10000);
+							textView1.setText("Destination Reached!");
+						}
+					}); 
 					mRoadMaker.startRoute();
 				} else {
 					Toast.makeText(context, "No currentLocation", Toast.LENGTH_SHORT).show();
@@ -121,6 +128,7 @@ public class MapActivity extends Activity  {
 	public void updatedLocation(GeoPoint currentLocation) {
 		textView.setText("CurrentLocation lat/long" + currentLocation.getLatitudeE6() + " " + currentLocation.getLongitudeE6());
 	}
+	
 	public TextView getTextView() {
 		return textView;
 	}

@@ -10,7 +10,6 @@ import org.osmdroid.util.GeoPoint;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Vibrator;
-
 import eu.uniek.gps.GPSHandler;
 import eu.uniek.gps.GPSLocationListener;
 
@@ -48,8 +47,6 @@ public class RouteHandler {
 		mRoad = getRoute();
 		mUpdateRunnable.run();
 	}
-	
-	
 	
 	public Road getRoute() {
 		RoadManager roadManager = new GoogleRoadManager();
